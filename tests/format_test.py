@@ -1,9 +1,20 @@
+import dataclasses
 from typing import Dict, Iterable, Optional
 
 import pytest
 
 from tango.common.testing import TangoTestCase
 from tango.format import _OPEN_FUNCTIONS, DillFormat, JsonFormat, TextFormat
+
+
+@dataclasses.dataclass
+class Foo:
+    value: str
+
+
+@dataclasses.dataclass
+class Bar:
+    foo: Foo
 
 
 class TestFormat(TangoTestCase):
@@ -28,6 +39,14 @@ class TestFormat(TangoTestCase):
     def test_json_format(self, compress: Optional[str]):
         artifact = {"Hello, World!": "Hi!"}
         format = JsonFormat[Dict[str, str]](compress)
+        format.write(artifact, self.TEST_DIR)
+        assert format.read(self.TEST_DIR) == artifact
+        assert "compress" in format.to_params()
+
+    @pytest.mark.parametrize("compress", _OPEN_FUNCTIONS.keys())
+    def test_json_format_with_dataclass(self, compress: Optional[str]):
+        artifact = Bar(Foo("Hello, World!"))
+        format = JsonFormat[Bar](compress)
         format.write(artifact, self.TEST_DIR)
         assert format.read(self.TEST_DIR) == artifact
         assert "compress" in format.to_params()
