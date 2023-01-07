@@ -19,11 +19,13 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Type,
     TypeVar,
     Union,
     cast,
 )
 
+import dacite
 import dill
 
 from tango.common import DatasetDict, filename_is_safe
@@ -240,14 +242,14 @@ class JsonFormat(Format[T], Generic[T]):
             classname: Union[str, List[str]] = o.pop("_dataclass")
             if isinstance(classname, list) and len(classname) == 2:
                 module, classname = classname
-                constructor: Callable = importlib.import_module(module)  # type: ignore
+                constructor: Type = importlib.import_module(module)  # type: ignore
                 for item in classname.split("."):
                     constructor = getattr(constructor, item)
             elif isinstance(classname, str):
                 constructor = globals()[classname]
             else:
                 raise RuntimeError(f"Could not parse {classname} as the name of a dataclass.")
-            return constructor(**o)
+            return dacite.from_dict(data_class=constructor, data=o)
         return o
 
     def write(self, artifact: T, dir: PathOrStr):
